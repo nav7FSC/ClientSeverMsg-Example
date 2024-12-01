@@ -2,6 +2,16 @@
 
 This project is a simple JavaFX-based client-server application that allows users to send messages to each other. The application consists of a server and a client interface, where the client can connect to the server, send messages, and receive responses. The server listens for incoming client connections and displays the received messages.
 
+## DEMO
+
+Local Host:
+https://github.com/user-attachments/assets/ec95ddf8-173f-43e1-804a-9121245d01a9
+
+Farmingdale edu:
+https://github.com/user-attachments/assets/3c359c9c-a418-4152-9c9f-50bdd63c5a85
+
+
+
 ## Features
 
 - **Server**: The server application listens on a specific port and waits for clients to connect. Once a connection is established, the server can receive messages and respond back to the client.
@@ -18,4 +28,4 @@ This project is a simple JavaFX-based client-server application that allows user
 
 ## Author
 
-- **Nav Singh** 
+- **Nav Singh**
