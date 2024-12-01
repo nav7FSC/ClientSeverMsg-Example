@@ -1,7 +1,5 @@
 package org.example.clientsevermsgexample;
 
-
-
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -12,38 +10,28 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.util.ResourceBundle;
+import java.util.*;
 
-import static java.lang.Thread.sleep;
-
+/**
+ * The {@code MainController} class handles client-server communication and manages
+ * the user interface actions in a JavaFX application.
+ */
 public class MainController implements Initializable {
-    @FXML
-    private ComboBox dropdownPort;
 
-    @Override
-    public void initialize(URL location, ResourceBundle resources) {
-        dropdownPort.getItems().addAll("7",     // ping
-                "13",     // daytime
-                "21",     // ftp
-                "23",     // telnet
-                "71",     // finger
-                "80",     // http
-                "119",     // nntp (news)
-                "161"      // snmp);
-        );
-    }
+    private PrintWriter out;
+    private BufferedReader in;
+    private Set<ClientHandler> clients = new HashSet<>();
+
+    @FXML
+    private ComboBox<String> dropdownPort;
 
     @FXML
     private Button clearBtn;
-
-
 
     @FXML
     private TextArea resultArea;
@@ -60,42 +48,71 @@ public class MainController implements Initializable {
     @FXML
     private TextField urlName;
 
-    Socket socket1;
-
-    Label lb122, lb12;
-    TextField msgText;
+    private Socket socket1;
 
     @FXML
-    void checkConnection(ActionEvent event) {
+    private Label lb122, lb12;
 
+    private TextField msgText;
+
+    /**
+     * Initializes the controller by populating the dropdown with port numbers and starting the server.
+     *
+     * @param location  the location used to resolve relative paths for the root object
+     * @param resources the resources used to localize the root object
+     */
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        dropdownPort.getItems().addAll(
+                "7",     // ping
+                "13",    // daytime
+                "21",    // ftp
+                "23",    // telnet
+                "71",    // finger
+                "80",    // http
+                "119",   // nntp (news)
+                "161"    // snmp
+        );
+
+        // Starts the server in a new thread
+        new Thread(this::runServer).start();
+    }
+
+    /**
+     * Checks the connection to the specified host and port.
+     *
+     * @param event the action event triggered by the user
+     */
+    @FXML
+    void checkConnection(ActionEvent event) {
         String host = urlName.getText();
         int port = Integer.parseInt(dropdownPort.getValue().toString());
 
-        try {
-            Socket sock = new Socket(host, port);
+        try (Socket sock = new Socket(host, port)) {
             resultArea.appendText(host + " listening on port " + port + "\n");
-            sock.close();
         } catch (UnknownHostException e) {
             resultArea.setText(String.valueOf(e) + "\n");
-            return;
         } catch (Exception e) {
-            resultArea.appendText(host + " not listening on port "
-                    + port + "\n");
+            resultArea.appendText(host + " not listening on port " + port + "\n");
         }
-
-
     }
 
-
+    /**
+     * Clears the result area and the URL input field.
+     *
+     * @param event the action event triggered by the user
+     */
     @FXML
     void clearBtn(ActionEvent event) {
         resultArea.setText("");
         urlName.setText("");
-
     }
 
-
-
+    /**
+     * Starts a new server window and displays server information.
+     *
+     * @param event the action event triggered by the user
+     */
     @FXML
     void startServer(ActionEvent event) {
         Stage stage = new Stage();
@@ -114,62 +131,44 @@ public class MainController implements Initializable {
 
         stage.setTitle("Server");
         stage.show();
-
-
-        new Thread(this::runServer).start();
-
     }
 
-    String message;
-
+    /**
+     * Runs the server, accepts client connections, and handles communication.
+     */
     private void runServer() {
-        try {
-
-            ServerSocket serverSocket = new ServerSocket(6666);
+        try (ServerSocket serverSocket = new ServerSocket(6666)) {
             updateServer("Server is running and waiting for a client...");
-            while (true) { // Infinite loop
+            while (true) {
                 try {
                     Socket clientSocket = serverSocket.accept();
+                    ClientHandler clientHandler = new ClientHandler(clientSocket, clients);
+                    clients.add(clientHandler);
+                    new Thread(clientHandler).start();
                     updateServer("Client connected!");
-
-                    new Thread(() -> {
-                        try {
-                            sleep(3000);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                    DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
-                    DataOutputStream dos = new DataOutputStream(clientSocket.getOutputStream());
-
-                    message = dis.readUTF();
-                    updateServer("Message from client: " + message);
-
-                    // Sending a response back to the client
-                    dos.writeUTF("Received: " + message);
-
-                    dis.close();
-                    dos.close();
-
                 } catch (IOException e) {
                     updateServer("Error: " + e.getMessage());
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
                 }
-                if (message.equalsIgnoreCase("exit")) break;
-
             }
         } catch (IOException e) {
             updateServer("Error: " + e.getMessage());
         }
     }
 
+    /**
+     * Updates the server information label with the given message.
+     *
+     * @param message the message to display
+     */
     private void updateServer(String message) {
-        // Run on the UI thread
         javafx.application.Platform.runLater(() -> lb12.setText(message + "\n"));
     }
 
-
+    /**
+     * Starts a new client window and sets up the user interface for client actions.
+     *
+     * @param event the action event triggered by the user
+     */
     @FXML
     void startClient(ActionEvent event) {
         Stage stage = new Stage();
@@ -178,7 +177,11 @@ public class MainController implements Initializable {
         connectButton.setLayoutX(100);
         connectButton.setLayoutY(300);
         connectButton.setOnAction(this::connectToServer);
-        // new Thread(this::connectToServer).start();
+
+        Button sendButton = new Button("Send");
+        sendButton.setLayoutX(200);
+        sendButton.setLayoutY(300);
+        sendButton.setOnAction(this::sendMessage);
 
         Label lb11 = new Label("Client");
         lb11.setLayoutX(100);
@@ -192,42 +195,101 @@ public class MainController implements Initializable {
         lb122.setLayoutY(200);
         root.getChildren().addAll(lb11, lb122, connectButton, msgText);
 
-
         Scene scene = new Scene(root, 600, 350);
         stage.setScene(scene);
         stage.setTitle("Client");
         stage.show();
-
-
     }
 
-
+    /**
+     * Connects to the server and handles communication in a separate thread.
+     *
+     * @param event the action event triggered by the user
+     */
     private void connectToServer(ActionEvent event) {
-
-
         try {
             socket1 = new Socket("localhost", 6666);
+            out = new PrintWriter(socket1.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
 
-            DataOutputStream dos = new DataOutputStream(socket1.getOutputStream());
-            DataInputStream dis = new DataInputStream(socket1.getInputStream());
-
-            dos.writeUTF(msgText.getText());
-            String response = dis.readUTF();
-            updateTextClient("Server response: " + response + "\n");
-
-            dis.close();
-            dos.close();
-            socket1.close();
+            new Thread(() -> {
+                String response;
+                try {
+                    while ((response = in.readLine()) != null) {
+                        updateTextClient(response);
+                    }
+                } catch (IOException e) {
+                    updateTextClient("Error: " + e.getMessage());
+                }
+            }).start();
+            out.println(msgText.getText());
         } catch (Exception e) {
             updateTextClient("Error: " + e.getMessage() + "\n");
         }
-
-
     }
 
+    /**
+     * Sends a message to the server.
+     *
+     * @param event the action event triggered by the user
+     */
+    @FXML
+    void sendMessage(ActionEvent event) {
+        if (out != null) {
+            out.println(msgText.getText());
+        }
+    }
+
+    /**
+     * Updates the client information label with the given message.
+     *
+     * @param message the message to display
+     */
     private void updateTextClient(String message) {
-        // Run on the UI thread
         javafx.application.Platform.runLater(() -> lb122.setText(message + "\n"));
     }
 
+    /**
+     * Opens a new window for user 1.
+     *
+     * @param event the action event triggered by the user
+     */
+    @FXML
+    void user1Msg(ActionEvent event) {
+        try {
+            Stage stage = new Stage();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/example/clientsevermsgexample/client-view.fxml"));
+            Parent root = loader.load();
+            ClientView controller = loader.getController();
+            controller.initialize();
+            Scene scene = new Scene(root, 500, 400);
+            stage.setScene(scene);
+            stage.setTitle("User 1");
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Opens a new window for user 2.
+     *
+     * @param event the action event triggered by the user
+     */
+    @FXML
+    void user2Msg(ActionEvent event) {
+        try {
+            Stage stage = new Stage();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/example/clientsevermsgexample/client-view.fxml"));
+            Parent root = loader.load();
+            ClientView controller = loader.getController();
+            controller.initialize();
+            Scene scene = new Scene(root, 500, 400);
+            stage.setScene(scene);
+            stage.setTitle("User 2");
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

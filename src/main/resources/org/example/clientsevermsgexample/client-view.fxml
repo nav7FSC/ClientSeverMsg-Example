@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<!-- Imports -->
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
@@ -8,18 +9,27 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
+<!-- Define the main layout container as an AnchorPane -->
 <AnchorPane fx:id="ap_main" prefHeight="372.0" prefWidth="467.0" xmlns="http://javafx.com/javafx/20.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.clientsevermsgexample.ClientView">
     <children>
+        <!-- Button to send messages -->
         <Button fx:id="button_send" layoutX="404" layoutY="340" text="Send" />
+
+        <!-- TextField for user to input messages -->
         <TextField fx:id="tf_message" layoutX="34.0" layoutY="340" prefHeight="26" prefWidth="361" />
+
+        <!-- ScrollPane to contain and scroll through messages -->
         <ScrollPane fx:id="sp_main" fitToWidth="true" layoutX="30" layoutY="70" prefHeight="256" prefWidth="418">
             <content>
+                <!-- VBox to hold individual message nodes dynamically -->
                 <VBox fx:id="vbox_messages" prefHeight="273.0" prefWidth="402.0" />
             </content>
         </ScrollPane>
 
+        <!-- Label displaying the title of the application -->
         <Label layoutX="168.0" layoutY="14.0" text="Messenger!">
             <font>
+                <!-- Font styling for the title -->
                 <Font name="Arial Rounded MT Bold" size="23" />
             </font>
         </Label>
