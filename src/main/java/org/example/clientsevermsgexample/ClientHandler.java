@@ -63,7 +63,7 @@ class ClientHandler implements Runnable {
      * @param message the message to be broadcast to all clients
      */
     private void broadcastMessage(String message) {
-        System.out.println("Broadcasting message: " + message);
+        System.out.println("Broadcasting msg: " + message);
         for (ClientHandler client : clients) {
             if (client != this || clients.size() == 1) {
                 client.out.println(message);
